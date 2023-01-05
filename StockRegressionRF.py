@@ -431,7 +431,7 @@ def ModOpt(TargetS,VL0,ALLdf,NextDaysNumI):
 	for v in VL0:
 		VL = VL + [v] 
 		try:
-			FeatureL = VL + [TargetS]
+			FeatureL = [TargetS] + VL
 			NN = [ x for x in list(ALLdf) if x[1] in FeatureL ]
 			DF = ALLdf[NN][:]
 			DFlenI = len(DF)
@@ -440,17 +440,30 @@ def ModOpt(TargetS,VL0,ALLdf,NextDaysNumI):
 			
 			DF = DF[DF['Adj Close'][TargetS] > 0 ] ## Filter Market Close Days Out
 			DF0 = DF[:-50]
+			DF1 = DF[-50:]
 			
-			ModScoreL = ModLoop(DF0,TargetS,FeatureL,FDaysNumIcount=NextDaysNumI)
+			#ModScoreL = ModLoop(DF0,TargetS,FeatureL,FDaysNumIcount=NextDaysNumI)
+			inputOBJ0 = ModelInput(DF0,TargetS,FeatureL,FDaysNumI= NextDaysNumI )
+
+			inputOBJ0.BuildModel(ModelType='RG')
+			MLmodel1 = inputOBJ0.model1
+			MLmodel1ScoreI = inputOBJ0.Score1
+			#print("Score0=",inputOBJ0.Score)
 			
-			#print(str([" ".join(VL), MLmodel1ScoreI]))
-			#if MLmodel1ScoreI > MaxF:
-			#	MaxF = MLmodel1ScoreI
-			#	model = MLmodel1
-			#else:
-			#	VL.remove(v)
+			inputOBJ1 = ModelInput(DF1,TargetS,FeatureL,XSC=inputOBJ0.XSC,YSC=inputOBJ0.YSC,FDaysNumI= NextDaysNumI )
+			inputOBJ1.CreateTestSet()
+			MLmodel1ScoreTestI = MLmodel1.score(inputOBJ1.testX,inputOBJ1.testY)
+			#print(MLmodel1.predict(inputOBJ1.testX))
+			#print(inputOBJ1.testY)
+
+			print(str([" ".join(VL), MLmodel1ScoreI,MLmodel1ScoreTestI]))
+			if MLmodel1ScoreTestI > MaxF:
+				MaxF = MLmodel1ScoreTestI
+				model = MLmodel1
+			else:
+				VL.remove(v)
 				
-			#ModScoreL = [str(FDaysNumI) + "Day",TargetS," ".join(VL), MaxF, model]	
+			ModScoreL = [str(NextDaysNumI) + "Day",TargetS," ".join(VL), MaxF, model]	
 		except:
 			print("ERROR at ",v)
 	
@@ -475,11 +488,11 @@ ALL = WorldSetL + FutureL + CryptoL + MetalL + FiatL  + BigTHL
 """
 ##
 """
-ALLdf = pd.read_pickle('DF5y.pkl')
+ALLdf0 = pd.read_pickle('DF5y.pkl')
 #AllTHAIDF = pd.read_pickle('AllTHAIDF2017-22.pkl')
 #mask = (ALLdf.index.date.astype('str') >= "2021-01-01") & (ALLdf.index.date.astype('str') < "2022-01-01" )
 #mask2 = (ALLdf.index.date.astype('str') >= "2021-03-01") & (ALLdf.index.date.astype('str') < "2022-03-30" ) 
-
+ALLdf = ALLdf0[ALLdf0['Adj Close']['^SET.BK'] > 0]
 
 #print("DF0",DF0)
 #DF1 = ALLdf[mask2]
@@ -520,8 +533,12 @@ for i in BigTHL[:0]:
 	if modelL[0] > 0.95 or modelL[2] > 0.95 :
 		modelsPoolL.append({i:modelL})
 		
-for i in BigTHL[:1]: ## Predict price of next 3 days
-	meldelL = ModOpt(i,VL,ALLdf,2)
+for i in BigTHL[:]: ## Predict price of next 3 days
+	print(ModOpt(i,VL,ALLdf[-1500:],1))
+	print(ModOpt(i,VL,ALLdf[-1500:],2))
+	print(ModOpt(i,VL,ALLdf[-1500:],4))
+	print(ModOpt(i,VL,ALLdf[-1500:],8))
+	print(ModOpt(i,VL,ALLdf[-1500:],10))
 	
 	
 for i in WorldSetL[:0]:
