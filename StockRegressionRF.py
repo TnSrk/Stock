@@ -407,6 +407,20 @@ def THSETfound(TargetS,VL,ALLdf,FDaysNumI):
 	RGmodel1ScoreI = inputOBJ0.Score1
 	
 	return([MLmodel1ScoreI,MLmodel1,RGmodel1ScoreI,RGmodel1 ])
+	
+def ModLoop(DF0,TargetS,FeatureL,FDaysNumIcount=1):
+	ModLoopOutL = []
+	for i in range(1,FDaysNumIcount+1):
+		inputOBJ0 = ModelInput(DF0,TargetS,FeatureL,FDaysNumI= i )
+
+		inputOBJ0.BuildModel(ModelType='RG')
+		MLmodel1 = inputOBJ0.model1
+		MLmodel1ScoreI = inputOBJ0.Score1
+		
+		ModLoopOutL.append([str(FDaysNumI) + "Day",TargetS, MLmodel1ScoreI," ".join(FeatureL), MLmodel1])
+			
+	return(ModLoopOutL)
+	
 
 def ModOpt(TargetS,VL0,ALLdf,FDaysNumI):
 	ModScoreL = []
@@ -417,7 +431,7 @@ def ModOpt(TargetS,VL0,ALLdf,FDaysNumI):
 		try:
 			FeatureL = VL + [TargetS]
 			NN = [ x for x in list(ALLdf) if x[1] in FeatureL ]
-			DF = ALLdf[NN][-1500:]
+			DF = ALLdf[NN][:]
 			DFlenI = len(DF)
 			DFtmpL = [x for x in list(DF) if DF[x].isna().sum() < DFlenI*0.5 ]
 			DF = DF[DFtmpL]
@@ -433,9 +447,10 @@ def ModOpt(TargetS,VL0,ALLdf,FDaysNumI):
 			#print(str([" ".join(VL), MLmodel1ScoreI]))
 			if MLmodel1ScoreI > MaxF:
 				MaxF = MLmodel1ScoreI
+				model = MLmodel1
 			else:
 				VL.remove(v)
-			ModScoreL = [FDaysNumI,"Day",TargetS," ".join(VL), MaxF]	
+			ModScoreL = [str(FDaysNumI) + "Day",TargetS," ".join(VL), MaxF, model]	
 		except:
 			print("ERROR at ",v)
 	
@@ -505,7 +520,7 @@ for i in BigTHL[:0]:
 	if modelL[0] > 0.95 or modelL[2] > 0.95 :
 		modelsPoolL.append({i:modelL})
 		
-for i in BigTHL[:4]: ## Predict price of next 5 days
+for i in BigTHL[:]: ## Predict price of next 5 days
 	print(ModOpt(i,VL,ALLdf,1))
 	print(ModOpt(i,VL,ALLdf,2))
 	print(ModOpt(i,VL,ALLdf,3))
@@ -574,7 +589,7 @@ for i in WorldSetL[:0]:
 	#ComDF['MLpredicted'+str(i)+'D'] = MLpredictedDF.shift(FDaysNumI)
 	ComDF['MLpredicted'] = MLpredictedDF
 	ComDF.plot(ax=ax)
-plt.show()
+#plt.show()
 
 #Recent2moDF =  yf.download(" ".join(FeatureL), period='3mo' )
 #Recent2moDF.to_pickle("Recent2moDF.pkl")
