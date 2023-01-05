@@ -418,7 +418,8 @@ def ModLoop(DF0,TargetS,FeatureL,FDaysNumIcount=1):
 		MLmodel1ScoreI = inputOBJ0.Score1
 		
 		ModLoopOutL.append([str(FDaysNumI) + "Day",TargetS, MLmodel1ScoreI," ".join(FeatureL), MLmodel1])
-		sys.stdout.write(str(FDaysNumI) + "Day",TargetS, MLmodel1ScoreI," ".join(FeatureL))
+		#sys.stdout.write(str(FDaysNumI) + "Day",TargetS, str(MLmodel1ScoreI)," ".join(FeatureL))
+		print((str(FDaysNumI) + "Day",TargetS, str(MLmodel1ScoreI)," ".join(FeatureL)))
 			
 	return(ModLoopOutL)
 	
@@ -519,8 +520,8 @@ for i in BigTHL[:0]:
 	if modelL[0] > 0.95 or modelL[2] > 0.95 :
 		modelsPoolL.append({i:modelL})
 		
-for i in BigTHL[:2]: ## Predict price of next 3 days
-	meldelL = ModOpt(i,VL,ALLdf,3)
+for i in BigTHL[:1]: ## Predict price of next 3 days
+	meldelL = ModOpt(i,VL,ALLdf,2)
 	
 	
 for i in WorldSetL[:0]:
