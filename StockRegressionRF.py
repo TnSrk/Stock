@@ -418,11 +418,12 @@ def ModLoop(DF0,TargetS,FeatureL,FDaysNumIcount=1):
 		MLmodel1ScoreI = inputOBJ0.Score1
 		
 		ModLoopOutL.append([str(FDaysNumI) + "Day",TargetS, MLmodel1ScoreI," ".join(FeatureL), MLmodel1])
+		sys.stdout.write(str(FDaysNumI) + "Day",TargetS, MLmodel1ScoreI," ".join(FeatureL))
 			
 	return(ModLoopOutL)
 	
 
-def ModOpt(TargetS,VL0,ALLdf,FDaysNumI):
+def ModOpt(TargetS,VL0,ALLdf,NextDaysNumI):
 	ModScoreL = []
 	MaxF = 0.0
 	VL = []
@@ -438,19 +439,17 @@ def ModOpt(TargetS,VL0,ALLdf,FDaysNumI):
 			
 			DF = DF[DF['Adj Close'][TargetS] > 0 ] ## Filter Market Close Days Out
 			DF0 = DF[:-50]
-			inputOBJ0 = ModelInput(DF0,TargetS,FeatureL,FDaysNumI=FDaysNumI)
-
-			inputOBJ0.BuildModel(ModelType='RG')
-			MLmodel1 = inputOBJ0.model1
-			MLmodel1ScoreI = inputOBJ0.Score1
+			
+			ModScoreL = ModLoop(DF0,TargetS,FeatureL,FDaysNumIcount=NextDaysNumI)
 			
 			#print(str([" ".join(VL), MLmodel1ScoreI]))
-			if MLmodel1ScoreI > MaxF:
-				MaxF = MLmodel1ScoreI
-				model = MLmodel1
-			else:
-				VL.remove(v)
-			ModScoreL = [str(FDaysNumI) + "Day",TargetS," ".join(VL), MaxF, model]	
+			#if MLmodel1ScoreI > MaxF:
+			#	MaxF = MLmodel1ScoreI
+			#	model = MLmodel1
+			#else:
+			#	VL.remove(v)
+				
+			#ModScoreL = [str(FDaysNumI) + "Day",TargetS," ".join(VL), MaxF, model]	
 		except:
 			print("ERROR at ",v)
 	
@@ -520,13 +519,10 @@ for i in BigTHL[:0]:
 	if modelL[0] > 0.95 or modelL[2] > 0.95 :
 		modelsPoolL.append({i:modelL})
 		
-for i in BigTHL[:]: ## Predict price of next 5 days
-	print(ModOpt(i,VL,ALLdf,1))
-	print(ModOpt(i,VL,ALLdf,2))
-	print(ModOpt(i,VL,ALLdf,3))
-	print(ModOpt(i,VL,ALLdf,4))
-	print(ModOpt(i,VL,ALLdf,5))
-
+for i in BigTHL[:2]: ## Predict price of next 3 days
+	meldelL = ModOpt(i,VL,ALLdf,3)
+	
+	
 for i in WorldSetL[:0]:
 	
 
