@@ -537,7 +537,7 @@ for i in BigTHL[:0]:
 		
 for i in BigTHL[:2]: ## Predict price of next 3 days
 	VL = ALL
-	VL.remoce(i)	
+	VL.remove(i)	
 	ALLdf1 = ALLdf[ALLdf['Adj Close',i] >  0 ]
 	print("lenDF =", len(ALLdf1))
 	print(ModOpt(i,VL,ALLdf1,1))
