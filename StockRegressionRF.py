@@ -536,7 +536,8 @@ for i in BigTHL[:0]:
 		modelsPoolL.append({i:modelL})
 		
 for i in BigTHL[:2]: ## Predict price of next 3 days
-	VL = ALL.remove(i)	
+	VL = ALL
+	VL.remoce(i)	
 	ALLdf1 = ALLdf[ALLdf['Adj Close',i] >  0 ]
 	print("lenDF =", len(ALLdf1))
 	print(ModOpt(i,VL,ALLdf1,1))
