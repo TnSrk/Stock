@@ -439,8 +439,8 @@ def ModOpt(TargetS,VL0,ALLdf,NextDaysNumI):
 			DF = DF[DFtmpL]
 			
 			DF = DF[DF['Adj Close'][TargetS] > 0 ] ## Filter Market Close Days Out
-			DF0 = DF[:-50]
-			DF1 = DF[-50:]
+			DF0 = DF[:-90]
+			DF1 = DF[-90:]
 			
 			#ModScoreL = ModLoop(DF0,TargetS,FeatureL,FDaysNumIcount=NextDaysNumI)
 			inputOBJ0 = ModelInput(DF0,TargetS,FeatureL,FDaysNumI= NextDaysNumI )
@@ -521,7 +521,8 @@ VL = ['^SET.BK','THB=X', 'GC=F', 'CL=F', 'ETH-USD', 'GBP=X', 'EUR=X', 'JPY=X', '
 #IRPCCorSet = "INR=X,AUD=X,MYR=X,PKR=X,KRW=X,^TNX,^HSI,^SET.BK,ZR=F".split(",")
 #CorSet=IRPCCorSet
 
-VL = ['^SET.BK','THB=X', 'GC=F', 'CL=F', 'ETH-USD', 'GBP=X', 'EUR=X', 'JPY=X', 'HG=F']
+#VL = ['^SET.BK','THB=X', 'GC=F', 'CL=F', 'ETH-USD', 'GBP=X', 'EUR=X', 'JPY=X', 'HG=F']
+#VL0 = BigTHL + FutureL + 
 modelsPoolL = []
 
 
@@ -533,12 +534,15 @@ for i in BigTHL[:0]:
 	if modelL[0] > 0.95 or modelL[2] > 0.95 :
 		modelsPoolL.append({i:modelL})
 		
-for i in BigTHL[:]: ## Predict price of next 3 days
-	print(ModOpt(i,VL,ALLdf[-1500:],1))
-	print(ModOpt(i,VL,ALLdf[-1500:],2))
-	print(ModOpt(i,VL,ALLdf[-1500:],4))
-	print(ModOpt(i,VL,ALLdf[-1500:],8))
-	print(ModOpt(i,VL,ALLdf[-1500:],10))
+for i in BigTHL[:2]: ## Predict price of next 3 days
+	VL = ALL.remove(i)
+	ALLdf1 = ALLdf[ALLdf['Adj Close',i] >  0 ]
+	print("lenDF =", len(ALLdf1))
+	print(ModOpt(i,VL,ALLdf1,1))
+	print(ModOpt(i,VL,ALLdf1,2))
+	print(ModOpt(i,VL,ALLdf1,3))
+	print(ModOpt(i,VL,ALLdf1,4))
+	print(ModOpt(i,VL,ALLdf1,5))
 	
 	
 for i in WorldSetL[:0]:
