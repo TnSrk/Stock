@@ -139,7 +139,8 @@ class ModelInput(object):
 		NameL = [ x for x in list(self.DF) if self.DF.median()[x] != 0 ] ## Filter out column with all None row
 		self.DF = self.DF[NameL] ## Select only non-all-None Column
 		self.DF = self.DF.fillna(method = 'ffill') ## Fill missing data point with previous day data
-		
+		self.DF = self.DF.fillna(method = 'bfill') ## Fill missing data point with next day data
+				
 	def CreatePredictInput(self):
 		self.X = self.DF.copy()
 		self.X = self.X.dropna()
@@ -535,7 +536,7 @@ for i in BigTHL[:0]:
 		modelsPoolL.append({i:modelL})
 		
 for i in BigTHL[:2]: ## Predict price of next 3 days
-	VL = ALL.remove(i)
+	VL = ALL.remove(i)	
 	ALLdf1 = ALLdf[ALLdf['Adj Close',i] >  0 ]
 	print("lenDF =", len(ALLdf1))
 	print(ModOpt(i,VL,ALLdf1,1))
