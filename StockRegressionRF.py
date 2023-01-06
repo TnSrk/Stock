@@ -123,7 +123,7 @@ def modelInput(DF0,TargetS,FeatureL,DaysI,dfmedianDFI=1):
 	return [x, y, dfmedianDF]
 	
 class ModelInput(object):
-	def __init__(self,DataFrameDF,TargetNameS,FeatureListL,FDaysNumI=1, BDaysNumI=5, XSC=0,YSC=0,SplitNumF=0.8):
+	def __init__(self,DataFrameDF,TargetNameS,FeatureListL,FDaysNumI=1, BDaysNumI=5, XSC=0,YSC=0,SplitNumF=0.8, FeaturesNameSL=[]):
 		self.DF = DataFrameDF.copy()		
 		self.FDaysNumI = FDaysNumI
 		self.BDaysNumI = BDaysNumI
@@ -135,6 +135,7 @@ class ModelInput(object):
 		self.XSC = XSC
 		self.TargetNameS = "AdjClose-"+TargetNameS
 		self.FeatureListL = FeatureListL
+		self.FeaturesNameSL = FeaturesNameSL
 		self.DF = pd.concat([self.DF, self.Retro()], axis=1) ## Create past data Columns from previous BDaysNumI rows
 		NameL = [ x for x in list(self.DF) if self.DF.median()[x] != 0 ] ## Filter out column with all None row
 		self.DF = self.DF[NameL] ## Select only non-all-None Column
@@ -159,7 +160,8 @@ class ModelInput(object):
 		self.X = self.X.dropna()
 		self.Y = pd.DataFrame(self.X.pop('TaRgEt'))
 		#self.X = self.DF
-		
+		if len(self.FeaturesNameSL) > 0:
+			self.X = self.X[self.FeaturesNameSL]
 		#print("self.X=\n",self.X) ##DEBUG
 		if (type(self.XSC) == int):
 			#self.Xscaler = self.standardize(self.X)
@@ -239,6 +241,7 @@ class ModelInput(object):
 		self.model1 = MD
 		self.model1.fit(x,y.values.ravel())
 		self.Score1 = self.model1.score(x_test,y_test)
+		self.featureslist = list(x)
 	
 def modeltest(TargetS, VL , DF0, DF1, DaysI):
 	InputSL =  VL + [TargetS]
@@ -451,7 +454,7 @@ def ModOpt(TargetS,VL0,ALLdf,NextDaysNumI):
 			MLmodel1ScoreI = inputOBJ0.Score1
 			#print("Score0=",inputOBJ0.Score)
 			
-			inputOBJ1 = ModelInput(DF1,TargetS,FeatureL,XSC=inputOBJ0.XSC,YSC=inputOBJ0.YSC,FDaysNumI= NextDaysNumI )
+			inputOBJ1 = ModelInput(DF1,TargetS,FeatureL,XSC=inputOBJ0.XSC,YSC=inputOBJ0.YSC,FDaysNumI= NextDaysNumI, FeaturesNameSL=inputOBJ0.X.keys() )
 			inputOBJ1.CreateTestSet()
 			MLmodel1ScoreTestI = MLmodel1.score(inputOBJ1.testX,inputOBJ1.testY)
 			#print(MLmodel1.predict(inputOBJ1.testX))
@@ -465,8 +468,9 @@ def ModOpt(TargetS,VL0,ALLdf,NextDaysNumI):
 				VL.remove(v)
 				
 			ModScoreL = [str(NextDaysNumI) + "Day",TargetS," ".join(VL), MaxF, model]	
-		except:
+		except Exception as e:
 			print("ERROR at ",v)
+			print(e)
 	
 	return(ModScoreL)
 
@@ -493,7 +497,16 @@ ALLdf0 = pd.read_pickle('DF5y.pkl')
 #AllTHAIDF = pd.read_pickle('AllTHAIDF2017-22.pkl')
 #mask = (ALLdf.index.date.astype('str') >= "2021-01-01") & (ALLdf.index.date.astype('str') < "2022-01-01" )
 #mask2 = (ALLdf.index.date.astype('str') >= "2021-03-01") & (ALLdf.index.date.astype('str') < "2022-03-30" ) 
+
+## Fill data before training
 ALLdf = ALLdf0[ALLdf0['Adj Close']['^SET.BK'] > 0]
+#DfNameL = [ x for x in list(ALLdf) if ALLdf.median()[x] != 0 ]
+#ALLdf = ALLdf[DfNameL]
+
+#ALLdf = ALLdf.fillna(method = 'ffill') 
+#ALLdf = ALLdf.fillna(method = 'bfill') 
+#ALLdf["Date"] = ALLdf.reset_index()['Date']
+#ALLdf = ALLdf.set_index("Date")
 
 #print("DF0",DF0)
 #DF1 = ALLdf[mask2]
@@ -535,16 +548,17 @@ for i in BigTHL[:0]:
 	if modelL[0] > 0.95 or modelL[2] > 0.95 :
 		modelsPoolL.append({i:modelL})
 		
-for i in BigTHL[:2]: ## Predict price of next 3 days
-	VL = ALL
-	VL.remove(i)	
+for i in BigTHL[:1]: ## Predict price of next 3 days
+	#VL = ALL
+	VL = MetalL
+	#VL.remove(i)	
 	ALLdf1 = ALLdf[ALLdf['Adj Close',i] >  0 ]
 	print("lenDF =", len(ALLdf1))
 	print(ModOpt(i,VL,ALLdf1,1))
 	print(ModOpt(i,VL,ALLdf1,2))
-	print(ModOpt(i,VL,ALLdf1,3))
-	print(ModOpt(i,VL,ALLdf1,4))
-	print(ModOpt(i,VL,ALLdf1,5))
+	#print(ModOpt(i,VL,ALLdf1,3))
+	#print(ModOpt(i,VL,ALLdf1,4))
+	#print(ModOpt(i,VL,ALLdf1,5))
 	
 	
 for i in WorldSetL[:0]:
