@@ -620,14 +620,15 @@ for i in BigTHL[:0]: ## Predict price of next 3 days
 	print(ModOpt(i,VL,ALLdf1,4))
 	print(ModOpt(i,VL,ALLdf1,5))
 
-for i in BigTHL[3:10]: ## Predict price of next 3 days
+for i in BigTHL[:10]: ## Predict price of next 3 days
 	VL = ALL
 	VL.remove(i)	
 	ALLdf1 = ALLdf[ALLdf[('Adj Close',i)] >  0 ]
-	FeatureL = [i] + WorldSetL
-	XL = [x for x in list(ALLdf0) if x[1] in FeatureL ]
+	FeatureL = [i] + WorldSetL 
+	XL = [x for x in list(ALLdf1) if x[1] in FeatureL ]
+	print(XL)
 	DF0 = ALLdf1[XL]
-	
+	print(DF0.shape)
 	modL = ModBdayLoop(DF0,i,FeatureL, BDaysNumIcount=10,BDaysNumIcountStartI=10)
 	print(modL)
 	
