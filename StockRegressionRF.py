@@ -6,6 +6,7 @@ import pickle
 from sklearn.preprocessing import StandardScaler
 from sklearn import preprocessing
 from sklearn.neural_network import MLPRegressor
+from sklearn.feature_selection import SelectFromModel
 import sys
 
 def DataLoad(TargetS,INL):
@@ -123,10 +124,12 @@ def modelInput(DF0,TargetS,FeatureL,DaysI,dfmedianDFI=1):
 	return [x, y, dfmedianDF]
 	
 class ModelInput(object):
-	def __init__(self,DataFrameDF,TargetNameS,FeatureListL,FDaysNumI=1, BDaysNumI=5, XSC=0,YSC=0,SplitNumF=0.8, FeaturesNameSL=[]):
+	def __init__(self,DataFrameDF,TargetNameS,FeatureListL,FDaysNumI=1, BDaysNumI=0, XSC=0,YSC=0,SplitNumF=0.8, FeaturesNameSL=[], DayOfYearI=0, LoopI=1,FeaturesSelectI=1):
 		self.DF = DataFrameDF.copy()		
 		self.FDaysNumI = FDaysNumI
 		self.BDaysNumI = BDaysNumI
+		self.LoopI = LoopI
+		self.FeaturesSelectI = FeaturesSelectI
 		self.DFnamesL = [ x[0].replace(" ","")+"-"+x[1] for x in list(DataFrameDF) ]
 		self.DF.columns = self.DFnamesL
 		self.median = self.Median()
@@ -136,11 +139,21 @@ class ModelInput(object):
 		self.TargetNameS = "AdjClose-"+TargetNameS
 		self.FeatureListL = FeatureListL
 		self.FeaturesNameSL = FeaturesNameSL
-		self.DF = pd.concat([self.DF, self.Retro()], axis=1) ## Create past data Columns from previous BDaysNumI rows
+		self.DF = pd.concat([self.DF, self.Retro(self.DF)], axis=1) ## Create past data Columns from previous BDaysNumI rows
 		NameL = [ x for x in list(self.DF) if self.DF.median()[x] != 0 ] ## Filter out column with all None row
 		self.DF = self.DF[NameL] ## Select only non-all-None Column
 		self.DF = self.DF.fillna(method = 'ffill') ## Fill missing data point with previous day data
 		self.DF = self.DF.fillna(method = 'bfill') ## Fill missing data point with next day data
+		if DayOfYearI == 1:
+			#print(self.DF)
+			TMPdf = self.DF.reset_index()
+			#print(TMPdf)
+			TMPdf['DOY'] = TMPdf['Date'].dt.dayofyear
+			#print(TMPdf)
+			TMPdf = TMPdf.set_index('Date')
+			#print(TMPdf)
+			self.DF = TMPdf
+		#print(self.DF)
 				
 	def CreatePredictInput(self):
 		self.X = self.DF.copy()
@@ -179,18 +192,30 @@ class ModelInput(object):
 		#else:
 		#	self.Yscaler = self.YSC
 		#print("self.X=\n",self.X) ##DEBUG
+	
+	def DayShift(self,DF,DaysNumI):
+		DF2shift =DF.shift(DaysNumI)
+		DF2shift.columns =  [str(x)+"t"+str(DaysNumI) for x in DF.keys()] 
+		#print(DF2shift)
+		return(DF2shift)
+
 		
-	def Retro(self):
+	def Retro(self,dfDF):
 		TMPDF = pd.DataFrame() 
-		TMPDF["Date"] = self.DF.reset_index()['Date']
+		#TMPDF["Date"] = self.DF.reset_index()['Date']
+		TMPDF["Date"] = dfDF.reset_index()['Date']
 		TMPDF = TMPDF.set_index('Date')
-		for i in range(1,self.BDaysNumI):
-			#print("TMPDF")
-			#print(TMPDF)
-			DF2t1 = dayShift(self.DF,i)
-			#print("DF2t1")
-			#print(DF2t1)
-			TMPDF = pd.concat([ TMPDF, DF2t1 ],axis=1)	
+		if self.LoopI==1:
+			for i in range(1,self.BDaysNumI + 1):
+				#print("TMPDF")
+				#print(TMPDF)
+				DF2t1 = self.DayShift(dfDF,i)
+				#print("DF2t1")
+				#print(DF2t1)
+				TMPDF = pd.concat([ TMPDF, DF2t1 ],axis=1)	
+		else:
+			DF2t1 = self.DayShift(dfDF,self.BDaysNumI)
+			TMPDF = pd.concat([ TMPDF, DF2t1 ],axis=1)
 		#TMPDF = TMPDF.set_index("Date")				
 		return TMPDF
 		
@@ -199,28 +224,30 @@ class ModelInput(object):
 		Median = self.DF.median()
 		return(Median)
 			
-	#def DFsplit(self,SplitNumF):
-			
-	#	xlenI = len(self.DF)
-		
-	#	self.x_train = self.X.iloc[:int(xlenI*SplitNumF) , :]
-	#	self.x_test = self.X.iloc[int(xlenI*SplitNumF): , :]
-
-	#	self.y_train = self.Y.iloc[:int(xlenI*SplitNumF)]
-	#	self.y_test = self.Y.iloc[int(xlenI*SplitNumF):]
-		
 	def standardize(self, df):
 		#scaler = StandardScaler()
 		scaler = preprocessing.RobustScaler()
 		scaler = scaler.fit(df)
 		return scaler
 
+	def FeaturesSelect(self,model):
+		selector = SelectFromModel(model, threshold=0.01)
+		#selectedX = selector.transform(x)
+		NameSL = list(self.X)
+		selectedL = selector.get_support(indices=True)
+		selectedFeatureS = [NameSL[i] for i in selectedL]
+		#print(NameSL)
+		#print(selectedFeatureS)
+		return([selectedFeatureS,selectedL])
+
 	def BuildModel(self,ModelType='RG'):
 		self.CreateTrainSET()
+		XX=self.X
+		YY=self.Y
 		SplitNumF = self.SplitNumF
-		x = pd.DataFrame(self.XSC.transform(self.X))
+		x = pd.DataFrame(self.XSC.transform(XX))
 		#y = pd.DataFrame(self.YSC.transform(self.Y))
-		y = self.Y
+		y = YY
 		xlenI = len(x)
 		x_train = x.iloc[:int(xlenI*SplitNumF) , :]
 		x_test = x.iloc[int(xlenI*SplitNumF): , :]
@@ -242,6 +269,20 @@ class ModelInput(object):
 		self.model1.fit(x,y.values.ravel())
 		self.Score1 = self.model1.score(x_test,y_test)
 		self.featureslist = list(x)
+		if self.FeaturesSelectI==1:
+			[FeaturesL,selectedL] = self.FeaturesSelect(self.model)
+			print(FeaturesL,selectedL)
+			self.model2FeaturesL = FeaturesL
+			#print('x=',x)
+			newDF = x_train[selectedL]
+			#print(newDF)
+			self.model2 = MD
+			self.model2.fit(newDF,y_train)
+			self.Score2 = self.model2.score(x_test[selectedL],y_test)			
+			print("Score2=",self.Score2)
+			
+		
+
 	
 def modeltest(TargetS, VL , DF0, DF1, DaysI):
 	InputSL =  VL + [TargetS]
@@ -418,14 +459,34 @@ def ModLoop(DF0,TargetS,FeatureL,FDaysNumIcount=1):
 		inputOBJ0 = ModelInput(DF0,TargetS,FeatureL,FDaysNumI= i )
 
 		inputOBJ0.BuildModel(ModelType='RG')
-		MLmodel1 = inputOBJ0.model1
-		MLmodel1ScoreI = inputOBJ0.Score1
+		MLmodel0 = inputOBJ0.model
+		MLmodel0ScoreI = inputOBJ0.Score1
 		
 		ModLoopOutL.append([str(FDaysNumI) + "Day",TargetS, MLmodel1ScoreI," ".join(FeatureL), MLmodel1])
 		#sys.stdout.write(str(FDaysNumI) + "Day",TargetS, str(MLmodel1ScoreI)," ".join(FeatureL))
 		print((str(FDaysNumI) + "Day",TargetS, str(MLmodel1ScoreI)," ".join(FeatureL)))
 			
 	return(ModLoopOutL)
+	
+def ModBdayLoop(DF0,TargetS,FeatureL, BDaysNumIcount=1, BDaysNumIcountStartI=1):
+	MaxScoreS = ''
+	MaxF = 0.0
+	for i in range(BDaysNumIcountStartI,BDaysNumIcount+1,2):
+		inputOBJ0 = ModelInput(DF0,TargetS,FeatureL,BDaysNumI= i, DayOfYearI=1, LoopI=1 )
+
+		inputOBJ0.BuildModel(ModelType='RG')
+		#MLmodel1 = inputOBJ0.model1
+		MLmodel0ScoreI = inputOBJ0.Score
+		MLmodel2ScoreI = inputOBJ0.Score2
+		model2FeaturesL = inputOBJ0.model2FeaturesL
+		
+		#ModLoopOutL.append([str(i) + "Day",TargetS, MLmodel1ScoreI," ".join(FeatureL), MLmodel1])
+		ScoreS = (TargetS,":",str(i) + "Day",TargetS, str(MLmodel0ScoreI)," ",str(MLmodel2ScoreI)," ".join(model2FeaturesL))
+		print(TargetS," " ,ScoreS)
+		if MLmodel2ScoreI > MaxF:
+			MaxF = MLmodel2ScoreI
+			MaxScoreS = ScoreS 
+	return(MaxScoreS)
 	
 
 def ModOpt(TargetS,VL0,ALLdf,NextDaysNumI):
@@ -486,7 +547,7 @@ WorldSetL = ["^GSPC","^TNX",'^SET.BK', "^N225", "^HSI", "^KS11", "^N100"]
 MetalL = ["SI=F", "HG=F", 'GC=F', "ALI=F", "PL=F", "PA=F", ]
 FiatL = ['THB=X','GBP=X', 'EUR=X', 'JPY=X',"CNH=X","RUB=X","VND=X", "AUD=X", "INR=X", "MYR=X", "IDR=X", "PHP=X", "SGD=X", "PKR=X", "MMK=X", "KRW=X",  "CAD=X" ]
 
-ALL = WorldSetL + FutureL + CryptoL + MetalL + FiatL  + BigTHL
+ALL = WorldSetL + FutureL + MetalL + FiatL  + BigTHL + CryptoL 
 #ALLdf 
 #mask = (ALLdf.index.date.astype('str') >= "2017-01-01") & (ALLdf.index.date.astype('str') < "2022-01-01" )
 
@@ -548,7 +609,7 @@ for i in BigTHL[:0]:
 	if modelL[0] > 0.95 or modelL[2] > 0.95 :
 		modelsPoolL.append({i:modelL})
 		
-for i in BigTHL[:1]: ## Predict price of next 3 days
+for i in BigTHL[:0]: ## Predict price of next 3 days
 	VL = ALL
 	VL.remove(i)	
 	ALLdf1 = ALLdf[ALLdf[('Adj Close',i)] >  0 ]
@@ -558,7 +619,17 @@ for i in BigTHL[:1]: ## Predict price of next 3 days
 	print(ModOpt(i,VL,ALLdf1,3))
 	print(ModOpt(i,VL,ALLdf1,4))
 	print(ModOpt(i,VL,ALLdf1,5))
+
+for i in BigTHL[3:10]: ## Predict price of next 3 days
+	VL = ALL
+	VL.remove(i)	
+	ALLdf1 = ALLdf[ALLdf[('Adj Close',i)] >  0 ]
+	FeatureL = [i] + WorldSetL
+	XL = [x for x in list(ALLdf0) if x[1] in FeatureL ]
+	DF0 = ALLdf1[XL]
 	
+	modL = ModBdayLoop(DF0,i,FeatureL, BDaysNumIcount=10,BDaysNumIcountStartI=10)
+	print(modL)
 	
 for i in WorldSetL[:0]:
 	
